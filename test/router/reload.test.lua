@@ -86,6 +86,20 @@ _ = require('vshard.router')
 vshard.router.module_version()
 check_reloaded()
 
+assert(rawget(_G, '__module_vshard_replicaset') ~= nil)
+_, replicaset = next(vshard.router.internal.replicasets)
+old_mt_method = getmetatable(replicaset).__index.call
+M = require('vshard.replicaset').internal
+M.errinj.ERRINJ_RELOAD = true
+package.loaded["vshard.replicaset"] = nil
+ok, msg = pcall(require, 'vshard.replicaset')
+assert(ok == false)
+old_mt_method == getmetatable(replicaset).__index.call
+M.errinj.ERRINJ_RELOAD = false
+package.loaded["vshard.replicaset"] = nil
+_ = require('vshard.replicaset')
+old_mt_method == getmetatable(replicaset).__index.call
+
 test_run:switch('default')
 test_run:cmd('stop server router_1')
 test_run:cmd('cleanup server router_1')

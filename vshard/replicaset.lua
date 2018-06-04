@@ -50,6 +50,21 @@ local luri = require('uri')
 local ffi = require('ffi')
 local gsc = require('vshard.util').generate_self_checker
 
+local M = rawget(_G, '__module_vshard_replicaset')
+if not M then
+    --
+    -- The module is loaded for the first time.
+    --
+    M = {
+        errinj = {
+            ERRINJ_RELOAD = false,
+        },
+        -- Cache metatables of old objects to update them.
+        replicaset_mt = {},
+        replica_mt = {},
+    }
+end
+
 --
 -- on_connect() trigger for net.box
 --
@@ -383,7 +398,7 @@ local replicaset_mt = {
 --
 local index = {}
 for name, func in pairs(replicaset_mt.__index) do
-    index[name] = gsc("replicaset", name, replicaset_mt, func)
+    index[name] = gsc("replicaset", name, M.replicaset_mt, func)
 end
 replicaset_mt.__index = index
 
@@ -408,7 +423,7 @@ local replica_mt = {
 }
 index = {}
 for name, func in pairs(replica_mt.__index) do
-    index[name] = gsc("replica", name, replica_mt, func)
+    index[name] = gsc("replica", name, M.replica_mt, func)
 end
 replica_mt.__index = index
 
@@ -523,7 +538,7 @@ local function buildall(sharding_cfg, old_replicasets)
             weight = replicaset.weight,
             bucket_count = 0,
             lock = replicaset.lock,
-        }, replicaset_mt)
+        }, M.replicaset_mt)
         local priority_list = {}
         for replica_uuid, replica in pairs(replicaset.replicas) do
             local old_replica = old_replicaset and
@@ -536,7 +551,7 @@ local function buildall(sharding_cfg, old_replicasets)
                 zone = replica.zone, net_timeout = consts.CALL_TIMEOUT_MIN,
                 net_sequential_ok = 0, net_sequential_fail = 0,
                 down_ts = curr_ts, old_replica = old_replica,
-            }, replica_mt)
+            }, M.replica_mt)
             new_replicaset.replicas[replica_uuid] = new_replica
             if replica.master then
                 new_replicaset.master = new_replica
@@ -592,8 +607,24 @@ local function wait_masters_connect(replicasets)
     end
 end
 
+if M.errinj.ERRINJ_RELOAD then
+    error('Error injection: reload')
+end
+
+--
+-- In case the module is loaded correctly, do externally-visible changes.
+--
+if not rawget(_G, '__module_vshard_replicaset') then
+    rawset(_G, '__module_vshard_replicaset', M)
+end
+M.replicaset_mt.__index = replicaset_mt.__index
+M.replicaset_mt.__tostring = replicaset_mt.__tostring
+M.replica_mt.__index = replica_mt.__index
+M.replica_mt.__tostring = replica_mt.__tostring
+
 return {
     buildall = buildall,
     calculate_etalon_balance = cluster_calculate_etalon_balance,
+    internal = M,
     wait_masters_connect = wait_masters_connect,
 }
