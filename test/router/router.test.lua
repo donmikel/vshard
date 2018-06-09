@@ -389,6 +389,16 @@ end;
 test_run:cmd("setopt delimiter ''");
 error_messages
 
+-- Error during reconfigure process.
+vshard.router.route(1):callro('echo', {'some_data'})
+vshard.router.internal.errinj.ERRINJ_CFG = true
+old_internal = table.copy(vshard.router.internal)
+_, err = pcall(vshard.router.cfg, cfg)
+err:match('Error injection:.*')
+vshard.router.internal.errinj.ERRINJ_CFG = false
+util.has_same_fields(old_internal, vshard.router.internal)
+vshard.router.route(1):callro('echo', {'some_data'})
+
 _ = test_run:cmd("switch default")
 test_run:drop_cluster(REPLICASET_2)
 

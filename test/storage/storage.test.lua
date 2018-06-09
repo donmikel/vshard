@@ -177,6 +177,18 @@ for _, new_replicaset in pairs(new_replicasets) do
 end;
 test_run:cmd("setopt delimiter ''");
 
+-- Error during reconfigure process.
+_, rs = next(vshard.storage.internal.replicasets)
+rs:callro('echo', {'some_data'})
+vshard.storage.internal.errinj.ERRINJ_CFG = true
+old_internal = table.copy(vshard.storage.internal)
+_, err = pcall(vshard.storage.cfg, cfg, names.storage_1_a)
+err:match('Error injection:.*')
+vshard.storage.internal.errinj.ERRINJ_CFG = false
+util.has_same_fields(old_internal, vshard.storage.internal)
+_, rs = next(vshard.storage.internal.replicasets)
+rs:callro('echo', {'some_data'})
+
 _ = test_run:cmd("switch default")
 
 test_run:drop_cluster(REPLICASET_2)
