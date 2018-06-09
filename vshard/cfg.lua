@@ -218,6 +218,10 @@ local cfg_template = {
         type = 'non-negative number', name = 'Sync timeout', is_optional = true,
         default = consts.DEFAULT_SYNC_TIMEOUT
     }},
+    {'connection_outdate_delay', {
+        type = 'non-negative number', name = 'Object outdate timeout',
+        is_optional = true, default = nil
+    }},
 }
 
 --
@@ -247,6 +251,8 @@ local function remove_non_box_options(cfg)
     cfg.collect_bucket_garbage_interval = nil
     cfg.collect_lua_garbage = nil
     cfg.sync_timeout = nil
+    cfg.sync_timeout = nil
+    cfg.connection_outdate_delay = nil
 end
 
 return {

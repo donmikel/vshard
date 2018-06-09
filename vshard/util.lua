@@ -75,8 +75,28 @@ local function generate_self_checker(obj_name, func_name, mt, func)
     end
 end
 
+local function sync_task(delay, task, ...)
+    if delay then
+        fiber.sleep(delay)
+    end
+    task(...)
+end
+
+--
+-- Run a function without interrupting current fiber.
+-- @param delay Delay in seconds before the task should be
+--        executed.
+-- @param task Function to be executed.
+-- @param ... Arguments which would be passed to the `task`.
+--
+local function async_task(delay, task, ...)
+    assert(delay == nil or type(delay) == 'number')
+    fiber.create(sync_task, delay, task, ...)
+end
+
 return {
     tuple_extract_key = tuple_extract_key,
     reloadable_fiber_f = reloadable_fiber_f,
     generate_self_checker = generate_self_checker,
+    async_task = async_task,
 }
