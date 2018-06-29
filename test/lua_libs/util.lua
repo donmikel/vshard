@@ -1,5 +1,6 @@
 local fiber = require('fiber')
 local log = require('log')
+local fio = require('fio')
 
 local function check_error(func, ...)
     local pstatus, status, err = pcall(func, ...)
@@ -84,10 +85,24 @@ local function has_same_fields(ethalon, data)
     return true
 end
 
+local PROJECT_SOURCE_DIR = os.getenv('PROJECT_SOURCE_DIR')
+if not PROJECT_SOURCE_DIR then
+    local script_path = debug.getinfo(1).source:match("@?(.*/)")
+    script_path = fio.abspath(script_path)
+    PROJECT_SOURCE_DIR = fio.abspath(script_path .. '/../../../')
+end
+
+local PROJECT_BINARY_DIR = os.getenv('PROJECT_BINARY_DIR')
+if not PROJECT_BINARY_DIR then
+    PROJECT_BINARY_DIR = PROJECT_SOURCE_DIR
+end
+
 return {
     check_error = check_error,
     shuffle_masters = shuffle_masters,
     collect_timeouts = collect_timeouts,
     wait_master = wait_master,
     has_same_fields = has_same_fields,
+    PROJECT_SOURCE_DIR = PROJECT_SOURCE_DIR,
+    PROJECT_BINARY_DIR = PROJECT_BINARY_DIR,
 }
